@@ -84,7 +84,7 @@ def main():
                 elif output_filename.endswith('.png'):
                     save_as_image(summary, output_filename, 'png')
                 elif output_filename.endswith('.jpg') or output_filename.endswith('.jpeg'):
-                    save_as_image(summary, output_filename, 'jpeg')
+                    save_as_image(summary.get('main_summary', ''), output_filename, 'jpeg')
                 else:
                     print(f"Warning: Unsupported file format for '{output_filename}'. Use .txt, .pdf, .docx, .xlsx, .png, or .jpg.")
 

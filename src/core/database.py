@@ -90,7 +90,7 @@ def save_summary_to_db(summary_data):
     # Prepare the values to be inserted
     values = (
         summary_data.get('source_url'),
-        summary_data.get('summary_text'),
+        json.dumps(summary_data.get('summary_text')),
         summary_data.get('style'),
         summary_data.get('language'),
         datetime.now().isoformat() # Add a timestamp
