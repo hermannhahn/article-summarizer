@@ -11,7 +11,7 @@ def summarize_text(model, text, language, style):
     
     try:
         response = model.generate_content(prompt)
-        return response.text
+        return {"main_summary": response.text, "style_requested": style, "language_requested": language}
     except Exception as e:
         return f"An error occurred during summarization: {e}"
 
