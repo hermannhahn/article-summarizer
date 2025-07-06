@@ -1,3 +1,4 @@
+import os
 from fpdf import FPDF
 from docx import Document
 from openpyxl import Workbook
@@ -6,6 +7,11 @@ from PIL import Image, ImageDraw, ImageFont
 def save_as_txt(text, filename):
     """Saves the provided text to a .txt file."""
     try:
+        # Ensure the directory exists before writing the file
+        directory = os.path.dirname(filename)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+            
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(text)
         print(f"Summary successfully saved to: {filename}")
@@ -49,6 +55,9 @@ def save_as_xlsx(text, filename):
 def save_as_image(text, filename, image_type='png'):
     """Saves the provided text to an image file (PNG or JPG)."""
     try:
+        directory = os.path.dirname(filename)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
         # Image settings
         width = 800
         padding = 50
