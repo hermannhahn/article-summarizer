@@ -1,6 +1,7 @@
 import os
 import sys
 import requests
+import argparse
 from bs4 import BeautifulSoup
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -39,16 +40,16 @@ def extrair_texto_do_artigo(url):
         print(f"Erro ao acessar a URL: {e}")
         return None
 
-def resumir_texto(modelo, texto):
+def resumir_texto(modelo, texto, idioma):
     """
-    Envia o texto para o modelo Gemini e retorna o resumo.
+    Envia o texto para o modelo Gemini e retorna o resumo no idioma especificado.
     """
     if not texto:
         return "Não foi possível extrair texto para resumir."
         
-    print("Enviando texto para a IA para sumarização... Isso pode levar um momento.")
+    print(f"Enviando texto para a IA para sumarização em {idioma}... Isso pode levar um momento.")
     
-    prompt = "Resuma o seguinte artigo de forma concisa e em português, focando nos pontos principais:\n\n" + texto
+    prompt = f"Resuma o seguinte artigo de forma concisa e em {idioma}, focando nos pontos principais:\n\n{texto}"
     
     try:
         response = modelo.generate_content(prompt)
@@ -60,21 +61,21 @@ def main():
     """
     Função principal que orquestra o processo de sumarização.
     """
-    if len(sys.argv) < 2:
-        print("Uso: python summarizer.py <URL_DO_ARTIGO>")
-        sys.exit(1)
-        
-    url_artigo = sys.argv[1]
+    parser = argparse.ArgumentParser(description="Sumarizador de Artigos com IA usando Google Gemini.")
+    parser.add_argument("url", help="A URL do artigo a ser resumido.")
+    parser.add_argument("--language", default="português", help="O idioma do resumo (ex: 'inglês', 'espanhol'). O padrão é 'português'.")
+    
+    args = parser.parse_args()
     
     try:
         modelo = configurar_api()
-        texto_artigo = extrair_texto_do_artigo(url_artigo)
+        texto_artigo = extrair_texto_do_artigo(args.url)
         
         if texto_artigo:
-            resumo = resumir_texto(modelo, texto_artigo)
-            print("\n--- Resumo do Artigo ---")
+            resumo = resumir_texto(modelo, texto_artigo, args.language)
+            print(f"\n--- Resumo do Artigo (em {args.language.capitalize()}) ---")
             print(resumo)
-            print("------------------------\n")
+            print("----------------------------------------------------\n")
             
     except ValueError as e:
         print(f"Erro de configuração: {e}")
