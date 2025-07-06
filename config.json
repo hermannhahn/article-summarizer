@@ -1,0 +1,12 @@
+{
+  "database_file": "summaries.db",
+  "table_name": "summaries",
+  "columns": {
+    "id": "summary_id",
+    "source_url": "source_url",
+    "summary_text": "summary_text",
+    "style": "style",
+    "language": "language",
+    "created_at": "timestamp"
+  }
+}
