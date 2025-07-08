@@ -27,7 +27,7 @@ def handle_summarize_command(args):
                 logging.warning(f"Skipping summarization for {source} due to text extraction failure.")
                 continue
 
-            summary = summarize_text(model, args.language, args.style, article_text)
+            summary = summarize_text(model, article_text, args.language, args.style)
             
             logging.info(f"--- Article Summary (Style: {args.style}) ---")
             logging.info(summary.get('main_summary', '')) # Display only main summary

@@ -18,3 +18,7 @@ teste.txt
 
 # Editor swap files
 *.swp
+
+# Gemini log
+gemini_log.md
+output.txt
