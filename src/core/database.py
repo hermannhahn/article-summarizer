@@ -1,3 +1,12 @@
+"""
+Manages the SQLite database for storing and retrieving article summaries.
+
+This module handles the connection to the database, the creation of the
+summary table, and provides functions to save and query summary data.
+It uses a `config.json` file for database configuration, allowing for
+flexible table and column naming.
+"""
+
 import sqlite3
 import json
 import os
@@ -5,51 +14,72 @@ from datetime import datetime
 from dotenv import load_dotenv
 import logging
 
-# Load environment variables from .env file
+# Load environment variables from .env file, which may contain DATABASE_FILE
 load_dotenv()
 
 # --- Configuration Loading ---
 
-def get_db_config():
-    """Loads the database mapping configuration from config.json."""
-    # Construct the path to the config file relative to this script's location
+def get_db_config() -> dict:
+    """Loads database configuration from `config.json`.
+
+    The configuration file is expected in the project root.
+
+    Returns:
+        dict: A dictionary with database configuration.
+
+    Raises:
+        FileNotFoundError: If config.json is not found.
+        json.JSONDecodeError: If config.json is not valid JSON.
+    """
     config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'config.json')
     try:
         with open(config_path, 'r') as f:
             return json.load(f)
     except FileNotFoundError:
-        logging.error(f"Configuration file config.json not found at {config_path}.")
-        raise ValueError("Configuration file config.json not found in the project root.")
-    except json.JSONDecodeError:
-        logging.error(f"Error decoding config.json. Please check for syntax errors in {config_path}.")
-        raise ValueError("Error decoding config.json. Please check for syntax errors.")
+        logging.error(f"Configuration file 'config.json' not found at {config_path}")
+        raise
+    except json.JSONDecodeError as e:
+        logging.error(f"Error decoding 'config.json': {e}")
+        raise
 
 # --- Database Initialization ---
 
-def get_db_connection():
-    """Establishes a connection to the SQLite database."""
+def get_db_connection() -> sqlite3.Connection:
+    """Establishes a connection to the SQLite database.
+
+    The database file path is determined by the `DATABASE_FILE` environment
+    variable, falling back to the `database_file` in `config.json`,
+    and finally to a default of 'summaries.db'.
+
+    Returns:
+        sqlite3.Connection: A connection object to the database.
+    """
     config = get_db_config()
-    # Prioritize DATABASE_FILE from .env, otherwise use config.json, fallback to default
     db_file = os.getenv('DATABASE_FILE', config.get('database_file', 'summaries.db'))
     logging.info(f"Connecting to database: {db_file}")
-    conn = sqlite3.connect(db_file)
-    return conn
+    try:
+        conn = sqlite3.connect(db_file, timeout=10)
+        return conn
+    except sqlite3.Error as e:
+        logging.error(f"Failed to connect to database '{db_file}': {e}")
+        raise
 
 def create_summary_table():
-    """Creates the summary table if it doesn't exist, using names from config."""
+    """Creates the summary table if it doesn't exist, using names from config.
+
+    Raises:
+        ValueError: If the configuration is missing required column mappings.
+    """
     config = get_db_config()
     table_name = config.get('table_name', 'summaries')
     cols = config.get('columns', {})
 
-    # Validate required columns are in config
     required_cols = ['id', 'source_url', 'summary_text', 'style', 'language', 'created_at']
     if not all(key in cols for key in required_cols):
-        logging.error("Config file is missing one or more required column mappings.")
-        raise ValueError("Config file is missing one or more required column mappings.")
+        msg = "Config file is missing one or more required column mappings."
+        logging.error(msg)
+        raise ValueError(msg)
 
-    # Build the CREATE TABLE statement dynamically
-    # Using TEXT for all fields for simplicity, as SQLite is flexible.
-    # Using INTEGER PRIMARY KEY for the ID is standard practice.
     create_table_sql = f"""
     CREATE TABLE IF NOT EXISTS {table_name} (
         {cols['id']} INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,31 +91,33 @@ def create_summary_table():
     );
     """
     
+    conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(create_table_sql)
         conn.commit()
-        logging.info(f"Table '{table_name}' ensured to exist.")
+        logging.info(f"Table '{table_name}' is ready.")
     except sqlite3.Error as e:
-        logging.error(f"Database error during table creation: {e}")
+        logging.error(f"Database error during table creation for '{table_name}': {e}")
     finally:
         if conn:
             conn.close()
 
 # --- Data Insertion ---
 
-def save_summary_to_db(summary_data):
-    """
-    Saves a summary record to the database.
-    :param summary_data: A dictionary containing the summary info, 
-                         e.g., {'source_url': 'http://...', 'summary_text': '...', ...}
+def save_summary_to_db(summary_data: dict):
+    """Saves a summary record to the database.
+
+    Args:
+        summary_data (dict): A dictionary containing the summary info.
+                             Keys should match the general purpose, e.g.,
+                             'source_url', 'summary_text', etc.
     """
     config = get_db_config()
     table_name = config.get('table_name', 'summaries')
     cols = config.get('columns', {})
 
-    # Prepare column names and placeholders for the INSERT statement
     db_columns = [
         cols['source_url'], 
         cols['summary_text'], 
@@ -95,50 +127,52 @@ def save_summary_to_db(summary_data):
     ]
     placeholders = ', '.join(['?' for _ in db_columns])
     
-    insert_sql = f"INSERT INTO {table_name} ({', '.join(db_columns)}) VALUES ({placeholders})"
+    insert_sql = f"INSERT INTO {table_name} ({ ', '.join(db_columns)}) VALUES ({placeholders})"
 
-    # Prepare the values to be inserted
     values = (
         summary_data.get('source_url'),
         json.dumps(summary_data.get('summary_text')),
         summary_data.get('style'),
         summary_data.get('language'),
-        datetime.now().isoformat() # Add a timestamp
+        datetime.now().isoformat()
     )
 
     conn = None
     try:
         conn = get_db_connection()
-        # Ensure the table exists before trying to insert
-        create_summary_table()
-        
+        create_summary_table()  # Ensure table exists
         cursor = conn.cursor()
         cursor.execute(insert_sql, values)
         conn.commit()
-        logging.info(f"Summary for '{summary_data.get('source_url')}' successfully saved to database.")
+        logging.info(f"Summary for '{summary_data.get('source_url')}' saved to database.")
+    except sqlite3.IntegrityError as e:
+        logging.error(f"Database integrity error (e.g., duplicate entry): {e}")
     except sqlite3.Error as e:
-        logging.error(f"Database error during insert: {e}")
+        logging.error(f"A database error occurred: {e}")
     finally:
         if conn:
             conn.close()
 
 # --- Data Retrieval ---
 
-def get_summaries(limit=None, url_contains=None, style=None):
-    """
-    Retrieves summaries from the database based on filters.
-    :param limit: Maximum number of summaries to retrieve.
-    :param url_contains: Filter summaries where the source URL contains this string.
-    :param style: Filter summaries by style.
-    :return: A list of dictionaries, each representing a summary.
+def get_summaries(limit: int | None = None, url_contains: str | None = None, style: str | None = None) -> list[dict]:
+    """Retrieves summaries from the database based on optional filters.
+
+    Args:
+        limit (int, optional): Maximum number of summaries to retrieve.
+        url_contains (str, optional): Filter for URLs containing this string.
+        style (str, optional): Filter summaries by a specific style.
+
+    Returns:
+        list[dict]: A list of dictionaries, each representing a summary.
     """
     config = get_db_config()
     table_name = config.get('table_name', 'summaries')
     cols = config.get('columns', {})
 
-    select_sql = f"SELECT {cols['id']}, {cols['source_url']}, {cols['summary_text']}, {cols['style']}, {cols['language']}, {cols['created_at']} FROM {table_name}"
-    conditions = []
-    params = []
+    query_parts = [f"SELECT {cols['id']}, {cols['source_url']}, {cols['summary_text']},",
+                   f"{cols['style']}, {cols['language']}, {cols['created_at']} FROM {table_name}"]
+    conditions, params = [], []
 
     if url_contains:
         conditions.append(f"{cols['source_url']} LIKE ?")
@@ -148,32 +182,34 @@ def get_summaries(limit=None, url_contains=None, style=None):
         params.append(style)
 
     if conditions:
-        select_sql += " WHERE " + " AND ".join(conditions)
+        query_parts.append("WHERE " + " AND ".join(conditions))
 
-    select_sql += f" ORDER BY {cols['created_at']} DESC"
+    query_parts.append(f"ORDER BY {cols['created_at']} DESC")
 
     if limit:
-        select_sql += " LIMIT ?"
+        query_parts.append("LIMIT ?")
         params.append(limit)
 
-    conn = None
+    select_sql = ' '.join(query_parts)
     summaries = []
+    conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(select_sql, params)
         rows = cursor.fetchall()
 
+        column_names = [description[0] for description in cursor.description]
         for row in rows:
-            summary_dict = {
-                'id': row[0],
-                'source_url': row[1],
-                'summary_text': json.loads(row[2]), # Load JSON string back to dict
-                'style': row[3],
-                'language': row[4],
-                'created_at': row[5]
-            }
+            summary_dict = dict(zip(column_names, row))
+            # Deserialize the JSON summary text
+            try:
+                summary_dict[cols['summary_text']] = json.loads(summary_dict[cols['summary_text']])
+            except (json.JSONDecodeError, TypeError):
+                logging.warning(f"Could not decode summary_text for summary ID {summary_dict[cols['id']]}")
+                # Keep it as a raw string if it's not valid JSON
             summaries.append(summary_dict)
+            
     except sqlite3.Error as e:
         logging.error(f"Database error during retrieval: {e}")
     finally:
