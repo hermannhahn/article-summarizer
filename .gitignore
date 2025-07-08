@@ -5,6 +5,20 @@
 __pycache__/
 *.pyc
 
-# env
+# Environment variables
 .env
 *.env
+
+# SQLite database
+*.db
+*.db-journal
+
+# Test output files
+teste.txt
+
+# Editor swap files
+*.swp
+
+# Gemini log
+gemini_log.md
+output.txt

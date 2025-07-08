@@ -3,61 +3,71 @@ from fpdf import FPDF
 from docx import Document
 from openpyxl import Workbook
 from PIL import Image, ImageDraw, ImageFont
+import logging
+
+def _ensure_directory_exists(filename):
+    directory = os.path.dirname(filename)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
 
 def save_as_txt(text, filename):
     """Saves the provided text to a .txt file."""
     try:
-        # Ensure the directory exists before writing the file
-        directory = os.path.dirname(filename)
-        if directory:
-            os.makedirs(directory, exist_ok=True)
-            
+        _ensure_directory_exists(filename)
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(text)
-        print(f"Summary successfully saved to: {filename}")
+        logging.info(f"Summary successfully saved to: {filename}")
     except IOError as e:
-        print(f"Error saving .txt file: {e}")
+        logging.error(f"Error saving .txt file: {e}")
 
 def save_as_pdf(text, filename):
-    """Saves the provided text to a .pdf file."""
+    """
+    Saves the provided text to a .pdf file.
+    Note: fpdf2 might have issues with non-latin characters without proper font setup.
+    """
     try:
+        _ensure_directory_exists(filename)
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Helvetica", size=12)
+        # Encode to latin-1 and decode back to handle some character issues, or use a font that supports UTF-8
         pdf.multi_cell(0, 10, text=text.encode('latin-1', 'replace').decode('latin-1'))
         pdf.output(filename)
-        print(f"Summary successfully saved to: {filename}")
+        logging.info(f"Summary successfully saved to: {filename}")
     except Exception as e:
-        print(f"Error saving .pdf file: {e}")
+        logging.error(f"Error saving .pdf file: {e}")
 
 def save_as_docx(text, filename):
     """Saves the provided text to a .docx file."""
     try:
+        _ensure_directory_exists(filename)
         document = Document()
         document.add_paragraph(text)
         document.save(filename)
-        print(f"Summary successfully saved to: {filename}")
+        logging.info(f"Summary successfully saved to: {filename}")
     except Exception as e:
-        print(f"Error saving .docx file: {e}")
+        logging.error(f"Error saving .docx file: {e}")
 
 def save_as_xlsx(text, filename):
     """Saves the provided text to an .xlsx file."""
     try:
+        _ensure_directory_exists(filename)
         wb = Workbook()
         ws = wb.active
         ws['A1'] = "Article Summary"
         ws['A2'] = text
         wb.save(filename)
-        print(f"Summary successfully saved to: {filename}")
+        logging.info(f"Summary successfully saved to: {filename}")
     except Exception as e:
-        print(f"Error saving .xlsx file: {e}")
+        logging.error(f"Error saving .xlsx file: {e}")
 
 def save_as_image(text, filename, image_type='png'):
-    """Saves the provided text to an image file (PNG or JPG)."""
+    """
+    Saves the provided text to an image file (PNG or JPG).
+    Note: Requires Pillow. Font handling might need system-specific fonts for full UTF-8 support.
+    """
     try:
-        directory = os.path.dirname(filename)
-        if directory:
-            os.makedirs(directory, exist_ok=True)
+        _ensure_directory_exists(filename)
         # Image settings
         width = 800
         padding = 50
@@ -67,9 +77,11 @@ def save_as_image(text, filename, image_type='png'):
 
         # Try to load a system font
         try:
+            # This font path might need to be adjusted based on the OS
             font = ImageFont.truetype("arial.ttf", font_size)
         except IOError:
             # Fallback to a generic font if arial.ttf is not found
+            logging.warning("arial.ttf not found. Falling back to default font for image export.")
             font = ImageFont.load_default()
 
         # Calculate necessary height for text
@@ -104,6 +116,6 @@ def save_as_image(text, filename, image_type='png'):
             y_text += (font_size + 5)
 
         img.save(filename, image_type.upper())
-        print(f"Summary successfully saved to: {filename}")
+        logging.info(f"Summary successfully saved to: {filename}")
     except Exception as e:
-        print(f"Error saving image file: {e}")
+        logging.error(f"Error saving image file: {e}")
