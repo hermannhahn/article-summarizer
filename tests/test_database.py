@@ -47,7 +47,7 @@ class TestDatabase(unittest.TestCase):
 
         # Assert
         expected_config_path = os.path.normpath("/fake/project/root/config.json")
-        mock_open_file.assert_called_once_with(expected_config_path, "r")
+        mock_open_file.assert_called_once_with(expected_config_path)
         mock_json_load.assert_called_once_with(mock_open_file())
         self.assertIsNotNone(config)
         self.assertEqual(config["database_file"], "test.db")

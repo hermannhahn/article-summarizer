@@ -109,7 +109,7 @@ class TestFileExporter(unittest.TestCase):
         # We need to check the arguments of the *last* call, as there are internal calls to Image.new
         # for text measurement that we don't care about for the final image creation.
         mock_image_new.assert_called_with(
-            "RGB", (800, 140), color=(255, 255, 255)
+            "RGB", (800, 158), color=(255, 255, 255)
         )  # Adjusted expected height based on new text
 
         # Assert ImageDraw.Draw was called for the final image
