@@ -6,10 +6,16 @@ This document provides practical examples of how to use the Article Summarizer C
 
 Imagine a technology company wants to analyze a news article about a competitor's financial results to include in an internal market intelligence report.
 
-### Command
+### Command (Local Installation)
 
 ```bash
-/home/hermann/Workspace/article-summarizer/.venv/bin/python /home/hermann/Workspace/article-summarizer/main.py --url "https://www.theverge.com/2023/10/24/23930342/microsoft-msft-q1-2024-earnings" --style narrative --language "en" --output "microsoft_q1_2024_earnings_summary.pdf"
+python main.py --url "https://www.theverge.com/2023/10/24/23930342/microsoft-msft-q1-2024-earnings" --style narrative --language "en" --output "microsoft_q1_2024_earnings_summary.pdf"
+```
+
+### Command (Docker)
+
+```bash
+docker run -v "$(pwd):/app/output" article-summarizer --url "https://www.theverge.com/2023/10/24/23930342/microsoft-msft-q1_2024_earnings.pdf" --style narrative --language "en" --output "output/microsoft_q1_2024_earnings_summary.pdf"
 ```
 
 ### What This Command Does:
@@ -32,10 +38,16 @@ Imagine a technology company wants to analyze a news article about a competitor'
 
 A software development team needs to quickly understand the key takeaways from a long technical blog post about a new programming framework. They want a bulleted list to share in their team's chat.
 
-### Command
+### Command (Local Installation)
 
 ```bash
-/home/hermann/Workspace/article-summarizer/.venv/bin/python /home/hermann/Workspace/article-summarizer/main.py --url "https://react.dev/blog/2024/04/25/react-19" --style bullet_points --language "en" --output "react_19_summary.txt"
+python main.py --url "https://react.dev/blog/2024/04/25/react-19" --style bullet_points --language "en" --output "react_19_summary.txt"
+```
+
+### Command (Docker)
+
+```bash
+docker run -v "$(pwd):/app/output" article-summarizer --url "https://react.dev/blog/2024/04/25/react-19" --style bullet_points --language "en" --output "output/react_19_summary.txt"
 ```
 
 ### What This Command Does:

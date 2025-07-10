@@ -16,8 +16,11 @@ A command-line tool that uses the Google Gemini API to summarize web articles fr
 
 - Python 3.8+
 - Git
+- Docker (optional, for containerized usage)
 
-## Installation
+## Installation & Usage
+
+### Option 1: Local Installation (Recommended for Development)
 
 1.  **Clone the repository:**
     ```bash
@@ -44,30 +47,55 @@ A command-line tool that uses the Google Gemini API to summarize web articles fr
       GOOGLE_API_KEY='YOUR_API_KEY_HERE'
       ```
 
-## Usage
+5.  **Run the application:**
+    ```bash
+    python main.py <SOURCE> [--language <LANGUAGE>] [--style <STYLE>] [--output <FILE_PATH>]
+    ```
 
-Run the main script from your terminal, providing the source (URL or file path) and optional arguments for language and style.
+### Option 2: Using Docker (Recommended for Deployment/Easy Sharing)
 
-```bash
-python main.py <SOURCE> [--language <LANGUAGE>] [--style <STYLE>]
-```
+1.  **Build the Docker image:**
+    Navigate to the project's root directory and run:
+    ```bash
+    docker build -t article-summarizer .
+    ```
+
+2.  **Run the application using Docker:**
+    ```bash
+    docker run article-summarizer <SOURCE> [--language <LANGUAGE>] [--style <STYLE>] [--output <FILE_PATH>]
+    ```
+    If you need to access output files on your host machine, mount a volume:
+    ```bash
+    docker run -v "$(pwd)/output:/app/output" article-summarizer <SOURCE> [--language <LANGUAGE>] [--style <STYLE>] --output "output/<FILE_NAME>"
+    ```
 
 ### Arguments:
 
 -   `<SOURCE>`: (Required) The URL of the article or the local path to a file (PDF, DOCX, XLSX).
 -   `--language`: (Optional) The target language for the summary. Defaults to `Portuguese`.
 -   `--style`: (Optional) The desired style for the summary (e.g., 'a concise paragraph', 'bullet points'). Defaults to `a concise paragraph`.
+-   `--output`: (Optional) Path to save the summary. Supports `.txt`, `.pdf`, `.docx`, `.xlsx`, `.png`, `.jpg` extensions.
 
 ### Examples:
 
-1.  **Summarize a web article (default settings):**
+1.  **Summarize a web article (default settings) - Local Installation:**
     ```bash
     python main.py https://www.theverge.com/2024/5/14/24156213/google-io-2024-ai-gemini-android-search-summary
     ```
 
-2.  **Summarize a local PDF in English using bullet points:**
+2.  **Summarize a local PDF in English using bullet points - Local Installation:**
     ```bash
-    python main.py "/path/to/my_document.pdf" --language English --style "bullet points"
+    python main.py "./my_document.pdf" --language English --style "bullet points"
+    ```
+
+3.  **Summarize a web article (default settings) - Docker:**
+    ```bash
+    docker run article-summarizer https://www.theverge.com/2024/5/14/24156213/google-io-2024-ai-gemini-android-search-summary
+    ```
+
+4.  **Summarize a local PDF in English using bullet points - Docker (with volume mount):**
+    ```bash
+    docker run -v "$(pwd)/data:/app/data" article-summarizer "data/my_document.pdf" --language English --style "bullet points"
     ```
 
 ## Development
@@ -96,6 +124,10 @@ python -m pytest tests/
 - `config.json`: Configuration for database settings.
 - `.env`: Environment variables (e.g., API keys).
 - `requirements.txt`: Project dependencies.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE). See the [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
