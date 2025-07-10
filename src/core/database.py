@@ -1,5 +1,4 @@
-"""
-Manages the SQLite database for storing and retrieving article summaries.
+"""Manages the SQLite database for storing and retrieving article summaries.
 
 This module handles the connection to the database, the creation of the
 summary table, and provides functions to save and query summary data.
@@ -7,20 +6,31 @@ It uses a `config.json` file for database configuration, allowing for
 flexible table and column naming.
 """
 
-import sqlite3
 import json
-import os
-from datetime import datetime
-from dotenv import load_dotenv
 import logging
+import os
+import sqlite3
+from datetime import datetime
+from typing import TypedDict, Union, List, cast, Any
+
+from dotenv import load_dotenv
+
+class SummaryRecord(TypedDict):
+    id: int
+    source_url: str
+    summary_text: Union[str, List[str]]
+    style: str
+    language: str
+    created_at: str
 
 # Load environment variables from .env file, which may contain DATABASE_FILE
 load_dotenv()
 
 # --- Configuration Loading ---
 
+
 def get_db_config() -> dict:
-    """Loads database configuration from `config.json`.
+    """Load database configuration from `config.json`.
 
     The configuration file is expected in the project root.
 
@@ -31,9 +41,11 @@ def get_db_config() -> dict:
         FileNotFoundError: If config.json is not found.
         json.JSONDecodeError: If config.json is not valid JSON.
     """
-    config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'config.json')
+    config_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config.json"
+    )
     try:
-        with open(config_path, 'r') as f:
+        with open(config_path) as f:
             return json.load(f)
     except FileNotFoundError:
         logging.error(f"Configuration file 'config.json' not found at {config_path}")
@@ -42,10 +54,12 @@ def get_db_config() -> dict:
         logging.error(f"Error decoding 'config.json': {e}")
         raise
 
+
 # --- Database Initialization ---
 
+
 def get_db_connection() -> sqlite3.Connection:
-    """Establishes a connection to the SQLite database.
+    """Establish a connection to the SQLite database.
 
     The database file path is determined by the `DATABASE_FILE` environment
     variable, falling back to the `database_file` in `config.json`,
@@ -55,7 +69,7 @@ def get_db_connection() -> sqlite3.Connection:
         sqlite3.Connection: A connection object to the database.
     """
     config = get_db_config()
-    db_file = os.getenv('DATABASE_FILE', config.get('database_file', 'summaries.db'))
+    db_file = os.getenv("DATABASE_FILE", config.get("database_file", "summaries.db"))
     logging.info(f"Connecting to database: {db_file}")
     try:
         conn = sqlite3.connect(db_file, timeout=10)
@@ -64,17 +78,25 @@ def get_db_connection() -> sqlite3.Connection:
         logging.error(f"Failed to connect to database '{db_file}': {e}")
         raise
 
-def create_summary_table():
-    """Creates the summary table if it doesn't exist, using names from config.
+
+def create_summary_table() -> None:
+    """Create the summary table if it doesn't exist, using names from config.
 
     Raises:
         ValueError: If the configuration is missing required column mappings.
     """
     config = get_db_config()
-    table_name = config.get('table_name', 'summaries')
-    cols = config.get('columns', {})
+    table_name = config.get("table_name", "summaries")
+    cols = config.get("columns", {})
 
-    required_cols = ['id', 'source_url', 'summary_text', 'style', 'language', 'created_at']
+    required_cols = [
+        "id",
+        "source_url",
+        "summary_text",
+        "style",
+        "language",
+        "created_at",
+    ]
     if not all(key in cols for key in required_cols):
         msg = "Config file is missing one or more required column mappings."
         logging.error(msg)
@@ -90,7 +112,7 @@ def create_summary_table():
         {cols['created_at']} TEXT NOT NULL
     );
     """
-    
+
     conn = None
     try:
         conn = get_db_connection()
@@ -104,10 +126,12 @@ def create_summary_table():
         if conn:
             conn.close()
 
+
 # --- Data Insertion ---
 
-def save_summary_to_db(summary_data: dict):
-    """Saves a summary record to the database.
+
+def save_summary_to_db(summary_data: dict) -> None:
+    """Save a summary record to the database.
 
     Args:
         summary_data (dict): A dictionary containing the summary info.
@@ -115,26 +139,28 @@ def save_summary_to_db(summary_data: dict):
                              'source_url', 'summary_text', etc.
     """
     config = get_db_config()
-    table_name = config.get('table_name', 'summaries')
-    cols = config.get('columns', {})
+    table_name = config.get("table_name", "summaries")
+    cols = config.get("columns", {})
 
     db_columns = [
-        cols['source_url'], 
-        cols['summary_text'], 
-        cols['style'], 
-        cols['language'], 
-        cols['created_at']
+        cols["source_url"],
+        cols["summary_text"],
+        cols["style"],
+        cols["language"],
+        cols["created_at"],
     ]
-    placeholders = ', '.join(['?' for _ in db_columns])
-    
-    insert_sql = f"INSERT INTO {table_name} ({ ', '.join(db_columns)}) VALUES ({placeholders})"
+    placeholders = ", ".join(["?" for _ in db_columns])
+
+    insert_sql = (
+        f"INSERT INTO {table_name} ({ ', '.join(db_columns)}) VALUES ({placeholders})"
+    )
 
     values = (
-        summary_data.get('source_url'),
-        json.dumps(summary_data.get('summary_text')),
-        summary_data.get('style'),
-        summary_data.get('language'),
-        datetime.now().isoformat()
+        summary_data.get("source_url"),
+        json.dumps(summary_data.get("summary_text")),
+        summary_data.get("style"),
+        summary_data.get("language"),
+        datetime.now().isoformat(),
     )
 
     conn = None
@@ -144,7 +170,9 @@ def save_summary_to_db(summary_data: dict):
         cursor = conn.cursor()
         cursor.execute(insert_sql, values)
         conn.commit()
-        logging.info(f"Summary for '{summary_data.get('source_url')}' saved to database.")
+        logging.info(
+            f"Summary for '{summary_data.get('source_url')}' saved to database."
+        )
     except sqlite3.IntegrityError as e:
         logging.error(f"Database integrity error (e.g., duplicate entry): {e}")
     except sqlite3.Error as e:
@@ -153,10 +181,14 @@ def save_summary_to_db(summary_data: dict):
         if conn:
             conn.close()
 
+
 # --- Data Retrieval ---
 
-def get_summaries(limit: int | None = None, url_contains: str | None = None, style: str | None = None) -> list[dict]:
-    """Retrieves summaries from the database based on optional filters.
+
+def get_summaries(
+    limit: int | None = None, url_contains: str | None = None, style: str | None = None
+) -> list[SummaryRecord]:
+    """Retrieve summaries from the database based on optional filters.
 
     Args:
         limit (int, optional): Maximum number of summaries to retrieve.
@@ -167,16 +199,18 @@ def get_summaries(limit: int | None = None, url_contains: str | None = None, sty
         list[dict]: A list of dictionaries, each representing a summary.
     """
     config = get_db_config()
-    table_name = config.get('table_name', 'summaries')
-    cols = config.get('columns', {})
+    table_name = config.get("table_name", "summaries")
+    cols = config.get("columns", {})
 
-    query_parts = [f"SELECT {cols['id']}, {cols['source_url']}, {cols['summary_text']},",
-                   f"{cols['style']}, {cols['language']}, {cols['created_at']} FROM {table_name}"]
+    query_parts = [
+        f"SELECT {cols['id']}, {cols['source_url']}, {cols['summary_text']},",
+        f"{cols['style']}, {cols['language']}, {cols['created_at']} FROM {table_name}",
+    ]
     conditions, params = [], []
 
     if url_contains:
         conditions.append(f"{cols['source_url']} LIKE ?")
-        params.append(f'%{url_contains}%')
+        params.append(f"%{url_contains}%")
     if style:
         conditions.append(f"{cols['style']} = ?")
         params.append(style)
@@ -190,8 +224,8 @@ def get_summaries(limit: int | None = None, url_contains: str | None = None, sty
         query_parts.append("LIMIT ?")
         params.append(limit)
 
-    select_sql = ' '.join(query_parts)
-    summaries = []
+    select_sql = " ".join(query_parts)
+    summaries: list[database.SummaryRecord] = []
     conn = None
     try:
         conn = get_db_connection()
@@ -201,15 +235,24 @@ def get_summaries(limit: int | None = None, url_contains: str | None = None, sty
 
         column_names = [description[0] for description in cursor.description]
         for row in rows:
-            summary_dict = dict(zip(column_names, row))
+            # Mypy struggles with dynamic dict creation and TypedDict.
+            # We cast to dict[str, Any] to satisfy mypy, as the runtime type is correct.
+            summary_dict: dict[str, Any] = dict(zip(column_names, row, strict=False))
+            
             # Deserialize the JSON summary text
             try:
-                summary_dict[cols['summary_text']] = json.loads(summary_dict[cols['summary_text']])
+                summary_text_raw = summary_dict["summary_text"]
+                if isinstance(summary_text_raw, str):
+                    summary_dict["summary_text"] = json.loads(summary_text_raw)
+                else:
+                    logging.warning("summary_text is not a string, skipping JSON decode.")
             except (json.JSONDecodeError, TypeError):
-                logging.warning(f"Could not decode summary_text for summary ID {summary_dict[cols['id']]}")
+                logging.warning("Could not decode summary_text for summary ID.")
                 # Keep it as a raw string if it's not valid JSON
-            summaries.append(summary_dict)
             
+            # Cast to SummaryRecord before appending to satisfy mypy's list type
+            summaries.append(cast(SummaryRecord, summary_dict))
+
     except sqlite3.Error as e:
         logging.error(f"Database error during retrieval: {e}")
     finally:

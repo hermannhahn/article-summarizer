@@ -5,19 +5,20 @@ PDF documents, DOCX files, and XLSX spreadsheets. It handles network requests
 for URLs and uses appropriate libraries for local file parsing.
 """
 
-
 import logging
 import os
+
 import requests
 from bs4 import BeautifulSoup
+from docx import Document
 from openpyxl import load_workbook
 from PyPDF2 import PdfReader
-from docx import Document
 
 # --- Private Helper Functions ---
 
+
 def _extract_text_from_pdf(file_path: str) -> str | None:
-    """Extracts text from a PDF file.
+    """Extract text from a PDF file.
 
     Args:
         file_path (str): The absolute path to the PDF file.
@@ -37,8 +38,9 @@ def _extract_text_from_pdf(file_path: str) -> str | None:
         logging.error(f"Failed to extract text from PDF '{file_path}': {e}")
         return None
 
+
 def _extract_text_from_docx(file_path: str) -> str | None:
-    """Extracts text from a DOCX file.
+    """Extract text from a DOCX file.
 
     Args:
         file_path (str): The absolute path to the DOCX file.
@@ -58,8 +60,9 @@ def _extract_text_from_docx(file_path: str) -> str | None:
         logging.error(f"Failed to extract text from DOCX '{file_path}': {e}")
         return None
 
+
 def _extract_text_from_xlsx(file_path: str) -> str | None:
-    """Extracts text from all cells in an XLSX file.
+    """Extract text from all cells in an XLSX file.
 
     Args:
         file_path (str): The absolute path to the XLSX file.
@@ -84,10 +87,12 @@ def _extract_text_from_xlsx(file_path: str) -> str | None:
         logging.error(f"Failed to extract text from XLSX '{file_path}': {e}")
         return None
 
+
 # --- Public API ---
 
+
 def extract_text(source: str) -> str | None:
-    """Extracts text from a given source (URL or local file path).
+    """Extract text from a given source (URL or local file path).
 
     This function determines the type of source and delegates to the
     appropriate helper function for text extraction.
@@ -99,18 +104,20 @@ def extract_text(source: str) -> str | None:
         str | None: The extracted text, or None if the source is invalid or
                     text extraction fails.
     """
-    if source.startswith(('http://', 'https://')):
+    if source.startswith(("http://", "https://")):
         logging.info(f"Extracting text from URL: {source}")
         try:
-            headers = {'User-Agent': 'Mozilla/5.0'}
+            headers = {"User-Agent": "Mozilla/5.0"}
             response = requests.get(source, headers=headers, timeout=15)
             response.raise_for_status()
-            soup = BeautifulSoup(response.content, 'html.parser')
-            paragraphs = soup.find_all('p')
-            article_text = '\n'.join(p.get_text() for p in paragraphs)
+            soup = BeautifulSoup(response.content, "html.parser")
+            paragraphs = soup.find_all("p")
+            article_text = "\n".join(p.get_text() for p in paragraphs)
             if not article_text.strip():
-                logging.warning("No <p> tags found. Falling back to generic text extraction.")
-                return soup.get_text(separator='\n', strip=True)
+                logging.warning(
+                    "No <p> tags found. Falling back to generic text extraction."
+                )
+                return soup.get_text(separator="\n", strip=True)
             return article_text
         except requests.exceptions.HTTPError as e:
             logging.error(f"HTTP Error accessing URL '{source}': {e}")
@@ -122,21 +129,27 @@ def extract_text(source: str) -> str | None:
             logging.error(f"Request timed out for URL '{source}': {e}")
             return None
         except requests.exceptions.RequestException as e:
-            logging.error(f"An unexpected network error occurred for URL '{source}': {e}")
+            logging.error(
+                f"An unexpected network error occurred for URL '{source}': {e}"
+            )
             return None
 
     elif os.path.exists(source):
         logging.info(f"Extracting text from local file: {source}")
         file_extension = os.path.splitext(source)[1].lower()
-        if file_extension == '.pdf':
+        if file_extension == ".pdf":
             return _extract_text_from_pdf(source)
-        elif file_extension == '.docx':
+        elif file_extension == ".docx":
             return _extract_text_from_docx(source)
-        elif file_extension == '.xlsx':
+        elif file_extension == ".xlsx":
             return _extract_text_from_xlsx(source)
         else:
-            logging.warning(f"Unsupported local file type: '{file_extension}'. Only .pdf, .docx, and .xlsx are supported.")
+            logging.warning(
+                f"Unsupported local file type: '{file_extension}'. Only .pdf, .docx, and .xlsx are supported."
+            )
             return None
     else:
-        logging.error(f"Source not found: '{source}'. It is not a valid URL or an existing file path.")
+        logging.error(
+            f"Source not found: '{source}'. It is not a valid URL or an existing file path."
+        )
         return None

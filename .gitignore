@@ -22,3 +22,7 @@ teste.txt
 # Gemini log
 gemini_log.md
 output.txt
+
+# Linter and formatter caches
+.mypy_cache/
+.ruff_cache/
